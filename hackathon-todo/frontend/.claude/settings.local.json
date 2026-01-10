@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(python run.py:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill //F //PID 8356)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)"
+    ]
+  }
+}

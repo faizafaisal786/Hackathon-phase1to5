@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(kubectl get:*)",
+      "Bash(docker build:*)",
+      "Bash(docker ps:*)",
+      "Bash(taskkill /F /FI \"IMAGENAME eq docker.exe\")",
+      "Bash(helm dependency:*)",
+      "Bash(helm install:*)",
+      "Bash(minikube status:*)",
+      "Bash(minikube start:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(minikube image ls:*)",
+      "Bash(minikube image build:*)",
+      "Bash(kubectl rollout restart:*)"
+    ]
+  }
+}

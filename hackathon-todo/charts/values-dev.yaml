@@ -1,0 +1,49 @@
+# Values for Development Environment
+
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    tag: "latest"
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8000
+  env:
+    environment: "development"
+    logLevel: "debug"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    tag: "latest"
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: false
+  env:
+    backendUrl: "http://localhost:8000"
+    environment: "development"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi

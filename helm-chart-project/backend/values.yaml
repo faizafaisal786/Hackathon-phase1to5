@@ -1,0 +1,23 @@
+image: my-backend-image:latest
+replicaCount: 2
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8080
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+config:
+  key1: value1
+  key2: value2
+
+secrets:
+  db_password: mysecretpassword
+  api_key: myapikey

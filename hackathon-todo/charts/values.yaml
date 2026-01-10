@@ -1,0 +1,67 @@
+# Root Helm Chart Values for Todo Application
+
+# Global values shared across all charts
+global:
+  environment: production
+  
+# Backend subchart configuration
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: hackathon-todo-backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  env:
+    openaiApiKey: ""  # Set via --set or environment
+    environment: "production"
+    logLevel: "info"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+
+# Frontend subchart configuration
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: hackathon-todo-frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: todo.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  env:
+    backendUrl: "http://backend:8000"
+    environment: "production"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3

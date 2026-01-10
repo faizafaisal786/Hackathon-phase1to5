@@ -1,0 +1,65 @@
+# Values for Staging Environment
+
+backend:
+  enabled: true
+  replicaCount: 2
+  image:
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  env:
+    environment: "staging"
+    logLevel: "info"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
+frontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    hosts:
+      - host: staging-todo.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: staging-todo-tls
+        hosts:
+          - staging-todo.example.com
+  env:
+    backendUrl: "https://staging-api.todo.example.com"
+    environment: "staging"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70

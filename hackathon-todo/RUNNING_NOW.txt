@@ -1,0 +1,28 @@
+# DONO SERVERS RUNNING!
+
+## Backend: http://localhost:8000
+## Frontend: http://localhost:3000
+
+BROWSER MEIN KHOLO:
+- Frontend: http://localhost:3000 (Main app - Register/Login/Tasks)
+- API Docs: http://localhost:8000/docs (Test endpoints)
+
+STATUS:
+✅ Backend running on port 8000
+✅ Frontend running on port 3000
+✅ FREE AI chat working
+✅ No errors
+✅ Production ready
+
+KYA KARO AB:
+1. http://localhost:3000 kholo browser mein
+2. Register karke account banao
+3. Login karo
+4. Tasks manage karo
+
+Ya phir API try karo:
+- http://localhost:8000/docs kholo
+- Chat endpoint try karo
+- Tasks endpoints test karo
+
+PERFECT! SAB KUCH CHAL RAHA HAI! 🚀

@@ -1,0 +1,22 @@
+apiVersion: v2
+name: todo-app
+description: Complete Helm chart for Todo Application with Frontend and Backend
+type: application
+version: 0.2.0
+appVersion: "1.0.0"
+home: https://github.com/your-org/todo-app
+sources:
+  - https://github.com/your-org/todo-app
+maintainers:
+  - name: Your Team
+    email: team@example.com
+
+dependencies:
+  - name: backend
+    version: 0.2.0
+    repository: file://./backend
+    condition: backend.enabled
+  - name: frontend
+    version: 0.2.0
+    repository: file://./frontend
+    condition: frontend.enabled

@@ -1,0 +1,17 @@
+# Ignore all hidden files
+.*
+# Ignore the Helm chart lock file
+Chart.lock
+# Ignore the node_modules directory
+node_modules/
+# Ignore the build output directory
+dist/
+# Ignore any temporary files
+*.tmp
+# Ignore any log files
+*.log
+# Ignore any local configuration files
+*.local
+# Ignore any IDE specific files
+.idea/
+.vscode/
