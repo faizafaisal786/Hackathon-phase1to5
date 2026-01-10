@@ -56,7 +56,7 @@ async def register(
     return db_user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/token", response_model=Token)
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: Annotated[Session, Depends(get_session)]
@@ -66,46 +66,13 @@ async def login(
 
     Returns an access token that must be included in subsequent requests.
     """
-    # Find user by username
-    statement = select(User).where(User.username == form_data.username)
-    user = session.exec(statement).first()
-
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
-        )
-
-    # Create access token
-    access_token = create_access_token(data={"sub": user.id})
-
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-@router.post("/token", response_model=Token)
-async def login_json(
-    credentials: LoginRequest,
-    session: Annotated[Session, Depends(get_session)]
-):
-    """
-    Alternative login endpoint accepting JSON.
-
-    Returns an access token that must be included in subsequent requests.
-    """
     # Find user by username or email
     statement = select(User).where(
-        (User.username == credentials.username) | (User.email == credentials.username)
+        (User.username == form_data.username) | (User.email == form_data.username)
     )
     user = session.exec(statement).first()
 
-    if not user or not verify_password(credentials.password, user.hashed_password):
+    if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
