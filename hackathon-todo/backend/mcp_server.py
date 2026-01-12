@@ -1,8 +1,16 @@
 import asyncio
+import sys
+from pathlib import Path
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 from typing import Optional
+
+# Add backend directory to path for imports
+backend_dir = Path(__file__).parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 from tasks import add_task, list_tasks, update_task, delete_task, complete_task
 
 # Create MCP server instance

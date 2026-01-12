@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Add backend directory to path
 backend_dir = Path(__file__).parent
@@ -165,15 +166,25 @@ TOOL_FUNCTIONS = {
 }
 
 SYSTEM_PROMPT = """You are a helpful task management assistant. You help users manage their todo list.
+You understand both English and Hindi/Hinglish commands.
 
 When users say:
-- "add" or "create" - use add_task tool
-- "show", "list", or "see" - use list_tasks tool
-- "complete", "done", or "finish" - use complete_task tool
-- "update" or "modify" - use update_task tool
-- "delete" or "remove" - use delete_task tool
+- "add", "create", "add kar", "add karo", "add kar do", "kaam add" - use add_task tool
+- "show", "list", "see", "dikha", "dikhao" - use list_tasks tool
+- "complete", "done", "finish", "poora", "khatam" - use complete_task tool
+- "update", "modify", "change" - use update_task tool
+- "delete", "remove", "hata", "hatao" - use delete_task tool
 
-Be conversational and helpful. After performing an action, confirm what you did.
+Date handling:
+- "kal ka" / "tomorrow" means task due tomorrow
+- "parso" / "day after tomorrow" means task due in 2 days
+- "aaj ka" / "today" means task due today
+
+When user says "Kal ka kaam add kar do" or similar, automatically extract:
+- Title: "kaam" or the actual task description
+- Due date: tomorrow's date
+
+Be conversational and helpful. After performing an action, confirm what you did in a friendly way.
 """
 
 
@@ -210,26 +221,92 @@ def execute_tool(tool_name: str, arguments: dict) -> str:
         return f"Error executing {tool_name}: {str(e)}"
 
 
+def parse_date_from_message(message: str) -> str:
+    """
+    Parse date from message (supports Hindi/English).
+    Returns: ISO format date string or empty string
+    """
+    message_lower = message.lower()
+    today = datetime.now()
+    
+    # Hindi/Hinglish date patterns
+    if any(word in message_lower for word in ["kal", "tomorrow", "kal ka", "tomorrow's"]):
+        tomorrow = today + timedelta(days=1)
+        return tomorrow.strftime("%Y-%m-%d")
+    elif any(word in message_lower for word in ["parso", "day after tomorrow"]):
+        day_after = today + timedelta(days=2)
+        return day_after.strftime("%Y-%m-%d")
+    elif any(word in message_lower for word in ["aaj", "today", "aaj ka"]):
+        return today.strftime("%Y-%m-%d")
+    elif any(word in message_lower for word in ["agle hafte", "next week"]):
+        next_week = today + timedelta(days=7)
+        return next_week.strftime("%Y-%m-%d")
+    elif any(word in message_lower for word in ["agle mahine", "next month"]):
+        next_month = today + timedelta(days=30)
+        return next_month.strftime("%Y-%m-%d")
+    
+    # Try to parse specific dates (simple format: DD-MM-YYYY or YYYY-MM-DD)
+    date_patterns = [
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",  # DD-MM-YYYY or DD/MM/YYYY
+        r"(\d{4}[-/]\d{1,2}[-/]\d{1,2})",    # YYYY-MM-DD or YYYY/MM/DD
+    ]
+    for pattern in date_patterns:
+        match = re.search(pattern, message)
+        if match:
+            try:
+                date_str = match.group(1)
+                # Try to parse common formats
+                for fmt in ["%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d", "%Y/%m/%d", "%d-%m-%y", "%d/%m/%y"]:
+                    try:
+                        parsed_date = datetime.strptime(date_str, fmt)
+                        return parsed_date.strftime("%Y-%m-%d")
+                    except ValueError:
+                        continue
+            except:
+                pass
+    
+    return ""
+
+
 def parse_demo_command(message: str) -> tuple:
     """
     Parse user message in demo mode using simple pattern matching.
+    Supports Hindi/Hinglish commands.
     Returns: (tool_name, arguments)
     """
     message_lower = message.lower().strip()
 
-    # Add task
-    if any(word in message_lower for word in ["add", "create", "new task"]):
+    # Add task - Hindi/Hinglish support
+    if any(word in message_lower for word in ["add", "create", "new task", "add kar", "add karo", "add kar do", 
+                                               "kaam add", "task add", "add kaam"]):
         # Extract task title
+        # Remove date-related keywords first
+        title_message = message_lower
+        for date_word in ["kal ka", "kal", "tomorrow", "tomorrow's", "parso", "aaj ka", "today"]:
+            title_message = re.sub(rf"\b{date_word}\b", "", title_message, flags=re.IGNORECASE)
+        
         patterns = [
             r"(?:add|create|new)\s+(?:a\s+)?task\s+(?:to\s+)?(.+)",
-            r"(?:add|create)\s+(.+)",
+            r"(?:add|create|kar|karo|kar\s+do)\s+(.+)",
+            r"(?:kaam|task)\s+add\s+(.+)",
+            r"add\s+(?:kar|karo|kar\s+do)\s+(.+)",
         ]
+        
+        title = "New task"
         for pattern in patterns:
-            match = re.search(pattern, message_lower)
+            match = re.search(pattern, title_message)
             if match:
                 title = match.group(1).strip()
-                return ("add_task", {"title": title})
-        return ("add_task", {"title": "New task"})
+                # Clean up common Hindi/English words
+                title = re.sub(r"\b(ka|ko|kaa|kii)\b", "", title, flags=re.IGNORECASE).strip()
+                title = re.sub(r"\s+", " ", title)
+                if title:
+                    break
+        
+        # Extract due date
+        due_date = parse_date_from_message(message)
+        
+        return ("add_task", {"title": title, "due_date": due_date})
 
     # List tasks
     elif any(word in message_lower for word in ["show", "list", "display", "what", "see", "view"]):

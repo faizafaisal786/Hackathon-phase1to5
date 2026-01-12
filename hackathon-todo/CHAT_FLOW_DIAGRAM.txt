@@ -1,0 +1,380 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║                    CHAT FLOW - COMPLETE DIAGRAM                  ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+## SIMPLE FLOW
+
+┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
+│  USER   │ => │ Chat UI │ => │   API   │ => │  Agent  │ => │  Tools  │
+│ Browser │    │Frontend │    │ Backend │    │agent.py │    │tasks.py │
+└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
+     ▲                                                              │
+     │                    RESPONSE RETURNS                          │
+     └──────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+
+## DETAILED FLOW EXAMPLE: "Add task to buy milk"
+
+STEP 1: USER INPUT
+───────────────────────────────────────────────────────────────────
+Location: http://localhost:3000/chat
+Action:   User types "add task to buy milk"
+          User clicks Send button
+
+STEP 2: FRONTEND (ChatUI.tsx)
+───────────────────────────────────────────────────────────────────
+File:     frontend/src/components/ChatUI.tsx
+
+Code Flow:
+  1. handleSendMessage() triggered
+  2. Create user message object
+  3. Add to chat display (optimistic update)
+  4. Show loading indicator
+  5. Call chatAPI.send()
+
+STEP 3: API CLIENT (api.ts)
+───────────────────────────────────────────────────────────────────
+File:     frontend/src/lib/api.ts
+
+Request:
+  POST http://localhost:8000/api/chat
+  Headers: Content-Type: application/json
+  Body: {
+    "message": "add task to buy milk",
+    "conversation_history": [],
+    "conversation_id": null
+  }
+
+STEP 4: BACKEND ENDPOINT (main.py)
+───────────────────────────────────────────────────────────────────
+File:     backend/main.py
+Endpoint: POST /api/chat
+
+Processing:
+  1. Receive request
+  2. Generate conversation_id (UUID)
+  3. Get conversation history
+  4. Call agent.chat(message, history)
+  5. Save messages to conversations.db
+  6. Return response
+
+STEP 5: AI AGENT (agent.py)
+───────────────────────────────────────────────────────────────────
+File:     backend/agent.py
+
+FREE Demo Mode (Default):
+  1. parse_demo_command("add task to buy milk")
+  2. Detect "add" keyword
+  3. Extract title: "buy milk"
+  4. Return: ("add_task", {"title": "buy milk"})
+  5. Call execute_tool("add_task", {...})
+
+Pattern Matching:
+  ✓ "add" → add_task
+  ✓ "show" → list_tasks
+  ✓ "complete" → complete_task
+  ✓ Hindi/Hinglish support
+
+STEP 6: TOOL EXECUTION (tasks.py)
+───────────────────────────────────────────────────────────────────
+File:     backend/tasks.py
+Function: add_task()
+
+Execution:
+  1. Generate unique ID: "abc-123"
+  2. Create task object:
+     {
+       "id": "abc-123",
+       "title": "buy milk",
+       "description": "",
+       "due_date": "",
+       "status": "pending",
+       "created_at": "2026-01-12T01:00:00"
+     }
+  3. Add to tasks array
+  4. Save to tasks.json
+  5. Return: "Task 'buy milk' added with ID abc-123"
+
+STEP 7: RESPONSE CHAIN
+───────────────────────────────────────────────────────────────────
+Tool Result → Agent:
+  "Task 'buy milk' added with ID abc-123"
+
+Agent → Backend:
+  {
+    "message": "I've added the task 'buy milk' to your list!",
+    "conversation_history": [...]
+  }
+
+Backend → Frontend:
+  {
+    "message": "I've added the task 'buy milk' to your list!",
+    "conversation_id": "uuid-here",
+    "conversation_history": [...]
+  }
+
+Frontend → User:
+  Displays: "AI: I've added the task 'buy milk' to your list! ✓"
+
+═══════════════════════════════════════════════════════════════════
+
+## AVAILABLE TOOLS
+
+Tool 1: add_task
+────────────────────────────────────────────────────────────────
+  Purpose:   Add a new task to the todo list
+  Parameters:
+    - title (required): Task title
+    - description (optional): Task details
+    - due_date (optional): When task is due
+
+  Example: "add task to buy groceries"
+  Result:  Task created with unique ID
+
+Tool 2: list_tasks
+────────────────────────────────────────────────────────────────
+  Purpose:   List all tasks or filter by status
+  Parameters:
+    - status (optional): "pending" or "completed"
+
+  Example: "show my tasks"
+  Result:  List of all tasks with details
+
+Tool 3: complete_task
+────────────────────────────────────────────────────────────────
+  Purpose:   Mark a task as completed
+  Parameters:
+    - id (required): Task ID
+
+  Example: "complete task abc-123"
+  Result:  Task status updated to "completed"
+
+Tool 4: update_task
+────────────────────────────────────────────────────────────────
+  Purpose:   Update task details
+  Parameters:
+    - id (required): Task ID
+    - title, description, due_date (optional)
+
+  Example: "update task abc-123 title to 'buy milk and bread'"
+  Result:  Task details updated
+
+Tool 5: delete_task
+────────────────────────────────────────────────────────────────
+  Purpose:   Delete a task
+  Parameters:
+    - id (required): Task ID
+
+  Example: "delete task abc-123"
+  Result:  Task removed from list
+
+═══════════════════════════════════════════════════════════════════
+
+## COMMAND EXAMPLES
+
+ENGLISH COMMANDS:
+─────────────────────────────────────────────────────────────────
+  Add Task:
+    • "Add a task to buy groceries"
+    • "Create a task: finish the report"
+    • "New task - call dentist"
+
+  View Tasks:
+    • "Show me all my tasks"
+    • "List my tasks"
+    • "What tasks do I have?"
+
+  Complete Task:
+    • "Complete task ID: abc-123"
+    • "Mark first task as done"
+    • "Finish the grocery task"
+
+HINDI/HINGLISH COMMANDS:
+─────────────────────────────────────────────────────────────────
+  Add Task:
+    • "Kal ka kaam add kar do"       (Tomorrow's task)
+    • "Parso ka task add karo"       (Day after tomorrow)
+    • "Aaj ka kaam add kar"          (Today's task)
+
+  View Tasks:
+    • "Sab tasks dikha do"           (Show all tasks)
+    • "Mere tasks dikhao"            (Show my tasks)
+    • "Kitne kaam hain?"             (How many tasks?)
+
+  Complete Task:
+    • "Pehla task complete kar"      (Complete first task)
+    • "Task poora kar do"            (Complete the task)
+    • "Kaam khatam kar"              (Finish the task)
+
+DATE PARSING:
+─────────────────────────────────────────────────────────────────
+  English:
+    • "tomorrow" / "kal" → Tomorrow's date
+    • "day after tomorrow" / "parso" → +2 days
+    • "today" / "aaj" → Today's date
+    • "next week" / "agle hafte" → +7 days
+
+  Example:
+    "add task buy milk tomorrow"
+    → Task created with due_date = "2026-01-13"
+
+═══════════════════════════════════════════════════════════════════
+
+## DATA STORAGE
+
+tasks.json
+─────────────────────────────────────────────────────────────────
+Location: backend/tasks.json
+Format:   JSON array of task objects
+Example:
+  [
+    {
+      "id": "abc-123",
+      "title": "buy milk",
+      "description": "Get 2 liters",
+      "due_date": "2026-01-13",
+      "status": "pending",
+      "created_at": "2026-01-12T01:00:00"
+    }
+  ]
+
+conversations.db
+─────────────────────────────────────────────────────────────────
+Location: backend/conversations.db
+Type:     SQLite database
+Schema:
+  CREATE TABLE conversations (
+    id TEXT,              -- Conversation UUID
+    role TEXT,            -- 'user' or 'assistant'
+    content TEXT,         -- Message content
+    timestamp TEXT        -- ISO datetime
+  )
+
+═══════════════════════════════════════════════════════════════════
+
+## FREE MODE vs OPENAI MODE
+
+FREE DEMO MODE (Default - No API Key Required):
+─────────────────────────────────────────────────────────────────
+  ✓ Pattern matching
+  ✓ No costs
+  ✓ Instant responses
+  ✓ Hindi/Hinglish support
+  ✓ Works offline
+
+  Flow: Message → Parse → Execute → Response
+  Speed: < 50ms
+
+OPENAI API MODE (Optional - Requires API Key):
+─────────────────────────────────────────────────────────────────
+  • Advanced natural language understanding
+  • Function calling
+  • Better context awareness
+  • Costs per request (~$0.001 per message)
+
+  Flow: Message → OpenAI → Function Call → Execute → Response
+  Speed: ~500-1000ms
+
+═══════════════════════════════════════════════════════════════════
+
+## COMPLETE ARCHITECTURE
+
+┌─────────────────────────────────────────────────────────────┐
+│                     FRONTEND (Next.js)                      │
+│                    http://localhost:3000                    │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │   ChatUI     │  │  api.ts      │  │  Other Pages │     │
+│  │  Component   │  │  API Client  │  │  Login/Tasks │     │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────┘     │
+└─────────┼──────────────────┼──────────────────────────────────┘
+          │                  │
+          │  User Input      │  HTTP POST
+          └──────────────────┼───────────────────┐
+                             │                   │
+┌────────────────────────────▼───────────────────▼─────────────┐
+│                  BACKEND (FastAPI)                           │
+│                 http://localhost:8000                        │
+│                                                              │
+│  ┌──────────────────────────────────────────────────┐      │
+│  │  main.py                                         │      │
+│  │  ┌────────────┐  ┌────────────┐  ┌──────────┐  │      │
+│  │  │ /api/chat  │  │ /api/tasks │  │  /auth/* │  │      │
+│  │  └─────┬──────┘  └────────────┘  └──────────┘  │      │
+│  └────────┼─────────────────────────────────────────┘      │
+│           │                                                 │
+│  ┌────────▼─────────────────────────────────────────┐      │
+│  │  agent.py (AI Agent)                             │      │
+│  │  ┌──────────────────┐  ┌──────────────────┐     │      │
+│  │  │ FREE Demo Mode   │  │ OpenAI API Mode  │     │      │
+│  │  │ Pattern Matching │  │ Function Calling │     │      │
+│  │  └────────┬─────────┘  └────────┬─────────┘     │      │
+│  └───────────┼────────────────────┼─────────────────┘      │
+│              │                    │                         │
+│  ┌───────────▼────────────────────▼─────────────────┐      │
+│  │  execute_tool()                                  │      │
+│  │  Maps tool names to functions                    │      │
+│  └───────────┬──────────────────────────────────────┘      │
+│              │                                              │
+│  ┌───────────▼──────────────────────────────────────┐      │
+│  │  tasks.py (Task Management)                      │      │
+│  │  • add_task()                                     │      │
+│  │  • list_tasks()                                   │      │
+│  │  • complete_task()                                │      │
+│  │  • update_task()                                  │      │
+│  │  • delete_task()                                  │      │
+│  └───────────┬──────────────────────────────────────┘      │
+└──────────────┼───────────────────────────────────────────────┘
+               │
+               │  Read/Write
+               ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    STORAGE                                   │
+│  ┌─────────────────┐      ┌──────────────────┐             │
+│  │  tasks.json     │      │ conversations.db │             │
+│  │  Task data      │      │ Chat history     │             │
+│  └─────────────────┘      └──────────────────┘             │
+└──────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+
+## KEY FILES
+
+FRONTEND:
+  • src/components/ChatUI.tsx      → Chat interface
+  • src/lib/api.ts                 → API client
+  • src/app/chat/page.tsx          → Chat page
+
+BACKEND:
+  • backend/main.py                → FastAPI server
+  • backend/agent.py               → AI agent logic
+  • backend/tasks.py               → Task management
+  • backend/conversations.py       → Chat history
+  • backend/mcp_server.py          → MCP protocol
+
+STORAGE:
+  • backend/tasks.json             → Task data
+  • backend/conversations.db       → Chat history
+
+═══════════════════════════════════════════════════════════════════
+
+## QUICK TEST COMMANDS
+
+Try these in the chat interface:
+
+1. "add task to test the system"
+2. "show me all my tasks"
+3. "complete the first task"
+4. "kal ka kaam add karo"
+5. "sab tasks dikha do"
+
+═══════════════════════════════════════════════════════════════════
+
+✅ CHAT FLOW IS WORKING PERFECTLY!
+
+Access: http://localhost:3000/chat
+
+═══════════════════════════════════════════════════════════════════

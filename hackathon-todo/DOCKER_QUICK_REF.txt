@@ -1,0 +1,87 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║               DOCKER QUICK REFERENCE CARD                        ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+BUILD COMMANDS:
+═══════════════════════════════════════════════════════════════════
+docker-compose build              → Build all services
+docker-compose build backend      → Build backend only
+docker-compose build --no-cache   → Build without cache
+
+RUN COMMANDS:
+═══════════════════════════════════════════════════════════════════
+docker-compose up                 → Start (foreground)
+docker-compose up -d              → Start (background)
+docker-compose up --build         → Build and start
+docker-compose up -d --build      → Build and start (background)
+
+STOP COMMANDS:
+═══════════════════════════════════════════════════════════════════
+docker-compose stop               → Stop services
+docker-compose down               → Stop and remove containers
+docker-compose down -v            → Stop, remove containers & volumes
+docker-compose restart            → Restart services
+
+LOG COMMANDS:
+═══════════════════════════════════════════════════════════════════
+docker-compose logs               → View logs
+docker-compose logs -f            → Follow logs
+docker-compose logs backend       → View backend logs
+docker-compose logs --tail=50     → Last 50 lines
+
+STATUS COMMANDS:
+═══════════════════════════════════════════════════════════════════
+docker-compose ps                 → List containers
+docker ps                         → All running containers
+docker images                     → List images
+docker stats                      → Resource usage
+
+ACCESS CONTAINER:
+═══════════════════════════════════════════════════════════════════
+docker exec -it todo-backend bash → Backend shell
+docker exec -it todo-frontend sh  → Frontend shell
+
+CLEANUP COMMANDS:
+═══════════════════════════════════════════════════════════════════
+docker system prune               → Remove unused data
+docker system prune -a            → Remove all unused data
+docker volume prune               → Remove unused volumes
+docker image prune                → Remove unused images
+
+TROUBLESHOOTING:
+═══════════════════════════════════════════════════════════════════
+docker logs todo-backend          → View backend logs
+docker logs todo-frontend         → View frontend logs
+docker inspect todo-backend       → Inspect backend container
+docker network ls                 → List networks
+docker network inspect todo-network → Inspect network
+
+BUILD INDIVIDUAL IMAGES:
+═══════════════════════════════════════════════════════════════════
+docker build -t todo-backend -f backend/Dockerfile .
+docker build -t todo-frontend ./frontend
+
+RUN INDIVIDUAL CONTAINERS:
+═══════════════════════════════════════════════════════════════════
+docker run -d -p 8000:8000 --name todo-backend todo-backend
+docker run -d -p 3000:3000 --name todo-frontend todo-frontend
+
+ACCESS POINTS:
+═══════════════════════════════════════════════════════════════════
+Frontend:     http://localhost:3000
+Backend:      http://localhost:8000
+API Docs:     http://localhost:8000/docs
+
+FILES:
+═══════════════════════════════════════════════════════════════════
+backend/Dockerfile                → Backend container
+frontend/Dockerfile               → Frontend container
+docker-compose.yml                → Orchestration
+DOCKER_GUIDE.md                   → Full documentation
+
+QUICK START:
+═══════════════════════════════════════════════════════════════════
+cd hackathon-todo
+docker-compose up -d

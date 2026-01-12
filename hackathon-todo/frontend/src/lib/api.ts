@@ -3,7 +3,29 @@
  */
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Try to get API URL from environment variable
+// If not set, try to infer from current URL or use localhost as fallback
+const getApiUrl = () => {
+  // If environment variable is set, use it
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  // In browser, check if we're on Vercel and try to use a backend URL pattern
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+
+    // If on Vercel (*.vercel.app), warn about missing API URL
+    if (hostname.includes('vercel.app')) {
+      console.warn('⚠️ NEXT_PUBLIC_API_URL not set! Using localhost. Please set environment variable in Vercel.');
+    }
+  }
+
+  // Fallback to localhost
+  return 'http://localhost:8000';
+};
+
+const API_URL = getApiUrl();
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -101,36 +123,37 @@ export const authAPI = {
 export const tasksAPI = {
   list: async (completed?: boolean) => {
     const params = completed !== undefined ? { completed } : {};
-    const response = await api.get<Task[]>('/tasks', { params });
-    return response.data;
+    const response = await api.get<any>('/api/tasks', { params });
+    // Backend returns {tasks: [...]} format
+    return response.data.tasks || response.data;
   },
 
   get: async (id: number) => {
-    const response = await api.get<Task>(`/tasks/${id}`);
+    const response = await api.get<Task>(`/api/tasks/${id}`);
     return response.data;
   },
 
   create: async (task: TaskCreate) => {
-    const response = await api.post<Task>('/tasks', task);
+    const response = await api.post<Task>('/api/tasks', task);
     return response.data;
   },
 
   update: async (id: number, task: TaskUpdate) => {
-    const response = await api.put<Task>(`/tasks/${id}`, task);
+    const response = await api.put<Task>(`/api/tasks/${id}`, task);
     return response.data;
   },
 
   delete: async (id: number) => {
-    await api.delete(`/tasks/${id}`);
+    await api.delete(`/api/tasks/${id}`);
   },
 
   markComplete: async (id: number) => {
-    const response = await api.patch<Task>(`/tasks/${id}/complete`);
+    const response = await api.patch<Task>(`/api/tasks/${id}/complete`);
     return response.data;
   },
 
   markIncomplete: async (id: number) => {
-    const response = await api.patch<Task>(`/tasks/${id}/incomplete`);
+    const response = await api.patch<Task>(`/api/tasks/${id}/incomplete`);
     return response.data;
   },
 };
@@ -147,7 +170,7 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   message: string;
-  conversation_id: number;
+  conversation_id: string;
   conversation_history: ChatMessage[];
 }
 
@@ -169,11 +192,11 @@ export interface ConversationResponse {
 }
 
 export const chatAPI = {
-  send: async (message: string, conversation_history?: ChatMessage[], conversation_id?: number) => {
-    const response = await api.post<ChatResponse>('/chat/', {
+  send: async (message: string, conversation_history?: ChatMessage[], conversation_id?: number | string) => {
+    const response = await api.post<ChatResponse>('/api/chat', {
       message,
       conversation_history,
-      conversation_id,
+      conversation_id: conversation_id?.toString(),
     });
     return response.data;
   },

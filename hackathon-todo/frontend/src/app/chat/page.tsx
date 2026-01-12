@@ -11,7 +11,7 @@ export default function ChatPage() {
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const [conversations, setConversations] = useState<ConversationResponse[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<number | undefined>(undefined);
+  const [selectedConversation, setSelectedConversation] = useState<number | string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -36,7 +36,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleConversationCreated = (id: number) => {
+  const handleConversationCreated = (id: string) => {
     setSelectedConversation(id);
     // Reload conversations list
     loadConversations();

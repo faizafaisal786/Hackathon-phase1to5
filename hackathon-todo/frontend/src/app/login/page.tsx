@@ -22,7 +22,22 @@ export default function LoginPage() {
       await login(username, password);
       router.push('/tasks');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
+      const errorData = err.response?.data;
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      if (errorData?.detail) {
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((e: any) => e.msg || e.message).join(', ');
+        } else if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        } else {
+          errorMessage = JSON.stringify(errorData.detail);
+        }
+      } else if (errorData?.message) {
+        errorMessage = errorData.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

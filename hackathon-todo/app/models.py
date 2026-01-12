@@ -40,6 +40,18 @@ class UserResponse(UserBase):
     created_at: datetime
 
 
+class Token(SQLModel):
+    """Token response schema."""
+    access_token: str
+    token_type: str = "bearer"
+
+
+class LoginRequest(SQLModel):
+    """Login request schema."""
+    username: str
+    password: str
+
+
 class TaskBase(SQLModel):
     """Base task model with shared fields."""
     title: str = Field(min_length=1, max_length=200)
@@ -136,6 +148,10 @@ class Conversation(ConversationBase, table=True):
         back_populates="conversation",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+
+
+# Update forward references
+SQLModel.update_forward_refs()
 
 
 class ConversationCreate(ConversationBase):

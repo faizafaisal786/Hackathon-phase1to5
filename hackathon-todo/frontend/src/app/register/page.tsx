@@ -36,7 +36,22 @@ export default function RegisterPage() {
       await register(email, username, password, fullName || undefined);
       router.push('/tasks');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      const errorData = err.response?.data;
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (errorData?.detail) {
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((e: any) => e.msg || e.message).join(', ');
+        } else if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        } else {
+          errorMessage = JSON.stringify(errorData.detail);
+        }
+      } else if (errorData?.message) {
+        errorMessage = errorData.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

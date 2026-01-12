@@ -1,79 +1,52 @@
 version: '3.8'
 
 services:
-  # FastAPI Backend Service
   backend:
     build:
       context: .
-      dockerfile: app/Dockerfile
-    container_name: hackathon-backend
+      dockerfile: backend/Dockerfile
+    container_name: todo-backend
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DATABASE_URL=sqlite:///./data/todo.db
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
-      - ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - OPENAI_API_KEY=demo
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./app:/app/app
-      - backend_data:/app/data
+      - ./backend/tasks.json:/app/tasks.json
+      - ./backend/conversations.db:/app/conversations.db
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
       interval: 30s
-      timeout: 10s
+      timeout: 3s
       retries: 3
-      start_period: 10s
-    networks:
-      - hackathon-network
-    depends_on:
-      - db
+      start_period: 5s
 
-  # Next.js Frontend Service
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: hackathon-frontend
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    container_name: todo-frontend
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
-      timeout: 10s
+      timeout: 3s
       retries: 3
       start_period: 10s
-    networks:
-      - hackathon-network
-    depends_on:
-      backend:
-        condition: service_healthy
-
-  # PostgreSQL Database (optional, currently using SQLite)
-  db:
-    image: postgres:15-alpine
-    container_name: hackathon-db
-    environment:
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
-      - POSTGRES_DB=${DB_NAME:-hackathon_todo}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - hackathon-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
-  postgres_data:
-  backend_data:
+  backend-data:
 
 networks:
-  hackathon-network:
-    driver: bridge
+  default:
+    name: todo-network

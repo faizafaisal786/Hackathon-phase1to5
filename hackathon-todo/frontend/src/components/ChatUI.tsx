@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { chatAPI, ChatMessage } from '@/lib/api';
 
 interface ChatUIProps {
-  conversationId?: number;
-  onConversationCreated?: (id: number) => void;
+  conversationId?: number | string;
+  onConversationCreated?: (id: string) => void;
 }
 
 export default function ChatUI({ conversationId, onConversationCreated }: ChatUIProps) {
@@ -14,7 +14,7 @@ export default function ChatUI({ conversationId, onConversationCreated }: ChatUI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [currentConversationId, setCurrentConversationId] = useState<number | undefined>(conversationId);
+  const [currentConversationId, setCurrentConversationId] = useState<number | string | undefined>(conversationId);
 
   // Auto-scroll to bottom
   useEffect(() => {

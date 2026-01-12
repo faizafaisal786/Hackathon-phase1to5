@@ -1,0 +1,254 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║         ☸️  KUBERNETES DEPLOYMENT - STEP BY STEP ☸️              ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+⚠️  DOCKER IS NOT RUNNING
+
+To deploy to Kubernetes, you need:
+1. Docker Desktop running
+2. Minikube started
+3. Images built in Minikube's Docker
+
+═══════════════════════════════════════════════════════════════════
+
+🚀 COMPLETE DEPLOYMENT STEPS:
+
+STEP 1: Start Docker Desktop
+─────────────────────────────────────────────────────────────────
+1. Open Docker Desktop application
+2. Wait for it to say "Docker Desktop is running"
+3. Verify: docker version (should work)
+
+STEP 2: Start Minikube
+─────────────────────────────────────────────────────────────────
+minikube start --memory=4096 --cpus=2
+
+Wait for: "Done! kubectl is now configured to use minikube"
+
+STEP 3: Configure Docker Environment
+─────────────────────────────────────────────────────────────────
+Windows PowerShell:
+  minikube docker-env | Invoke-Expression
+
+Windows CMD:
+  @FOR /f "tokens=*" %i IN ('minikube docker-env') DO @%i
+
+Linux/Mac:
+  eval $(minikube docker-env)
+
+This makes Docker commands use Minikube's Docker.
+
+STEP 4: Build Images in Minikube
+─────────────────────────────────────────────────────────────────
+cd hackathon-todo
+
+# Build backend
+docker build -t todo-backend:latest -f backend/Dockerfile .
+
+# Build frontend  
+docker build -t todo-frontend:latest ./frontend
+
+# Verify images exist
+docker images | grep todo
+
+STEP 5: Deploy to Kubernetes
+─────────────────────────────────────────────────────────────────
+kubectl apply -f k8s/
+
+This will deploy:
+  ✓ Backend deployment (2 replicas)
+  ✓ Backend service (ClusterIP)
+  ✓ Frontend deployment (2 replicas)
+  ✓ Frontend service (NodePort)
+  ✓ Ingress (optional)
+
+STEP 6: Wait for Pods to Start
+─────────────────────────────────────────────────────────────────
+kubectl get pods -w
+
+Wait until you see:
+  todo-backend-xxx-xxx    1/1     Running
+  todo-backend-xxx-yyy    1/1     Running
+  todo-frontend-xxx-xxx   1/1     Running
+  todo-frontend-xxx-yyy   1/1     Running
+
+Press Ctrl+C to stop watching.
+
+STEP 7: Access the Application
+─────────────────────────────────────────────────────────────────
+minikube service todo-frontend
+
+This opens your browser automatically!
+
+Or get the URL:
+  minikube service todo-frontend --url
+
+═══════════════════════════════════════════════════════════════════
+
+⚡ ALTERNATIVE: USE THE AUTOMATED SCRIPT
+
+Windows:
+  cd hackathon-todo
+  MINIKUBE_DEPLOY.bat
+
+Linux/Mac:
+  cd hackathon-todo
+  ./MINIKUBE_DEPLOY.sh
+
+This script does ALL steps automatically!
+
+═══════════════════════════════════════════════════════════════════
+
+🔍 VERIFY DEPLOYMENT:
+
+Check Status:
+  kubectl get all
+
+Expected output:
+  NAME                                READY   STATUS    RESTARTS   AGE
+  pod/todo-backend-xxx-xxx            1/1     Running   0          1m
+  pod/todo-backend-xxx-yyy            1/1     Running   0          1m
+  pod/todo-frontend-xxx-xxx           1/1     Running   0          1m
+  pod/todo-frontend-xxx-yyy           1/1     Running   0          1m
+
+  NAME                    TYPE        CLUSTER-IP      PORT(S)
+  service/todo-backend    ClusterIP   10.x.x.x        8000/TCP
+  service/todo-frontend   NodePort    10.x.x.x        3000:30000/TCP
+
+Check Logs:
+  kubectl logs -l app=todo-backend -f
+  kubectl logs -l app=todo-frontend -f
+
+Check Health:
+  kubectl describe pod <pod-name>
+
+═══════════════════════════════════════════════════════════════════
+
+🐛 TROUBLESHOOTING:
+
+Issue: Docker not running
+─────────────────────────────────────────────────────────────────
+Solution:
+  1. Start Docker Desktop
+  2. Wait for "Docker Desktop is running"
+  3. Try: docker version
+  4. Retry minikube start
+
+Issue: Minikube won't start
+─────────────────────────────────────────────────────────────────
+Solution:
+  minikube delete
+  minikube start --driver=docker --memory=4096 --cpus=2
+
+Issue: ImagePullBackOff
+─────────────────────────────────────────────────────────────────
+Solution:
+  1. eval $(minikube docker-env)
+  2. Rebuild images
+  3. kubectl delete pod <pod-name>
+
+Issue: CrashLoopBackOff
+─────────────────────────────────────────────────────────────────
+Solution:
+  kubectl logs <pod-name>
+  kubectl describe pod <pod-name>
+  Check the error and fix the issue
+
+Issue: Cannot access service
+─────────────────────────────────────────────────────────────────
+Solution:
+  1. kubectl get services
+  2. kubectl get endpoints
+  3. Try: kubectl port-forward service/todo-frontend 3000:3000
+  4. Access: http://localhost:3000
+
+═══════════════════════════════════════════════════════════════════
+
+📊 WHAT GETS DEPLOYED:
+
+Backend Pods (2 replicas):
+  • Image: todo-backend:latest
+  • Port: 8000
+  • Service: ClusterIP (internal only)
+  • Health Checks: Liveness + Readiness
+  • Resources: 256Mi-512Mi RAM, 250m-500m CPU
+
+Frontend Pods (2 replicas):
+  • Image: todo-frontend:latest
+  • Port: 3000
+  • Service: NodePort 30000 (external access)
+  • Health Checks: Liveness + Readiness
+  • Resources: 256Mi-512Mi RAM, 250m-500m CPU
+
+Network:
+  • Frontend → Backend via http://todo-backend:8000
+  • External access via NodePort or Ingress
+
+═══════════════════════════════════════════════════════════════════
+
+🎯 USEFUL COMMANDS:
+
+Dashboard:
+  minikube dashboard
+
+Scale:
+  kubectl scale deployment todo-backend --replicas=3
+  kubectl scale deployment todo-frontend --replicas=4
+
+Update (after code changes):
+  eval $(minikube docker-env)
+  docker build -t todo-backend:latest -f backend/Dockerfile .
+  kubectl rollout restart deployment/todo-backend
+
+Delete:
+  kubectl delete -f k8s/
+
+Stop:
+  minikube stop
+
+Delete Cluster:
+  minikube delete
+
+═══════════════════════════════════════════════════════════════════
+
+✅ CURRENT STATUS:
+
+Docker Desktop:        ❌ NOT RUNNING (needs to start)
+Minikube:             ❌ NOT RUNNING (start after Docker)
+Images Built:         ❌ NOT YET (build after Minikube starts)
+K8s Manifests:        ✅ READY (k8s/ directory)
+Deployment Scripts:   ✅ READY
+
+═══════════════════════════════════════════════════════════════════
+
+🎯 NEXT STEPS:
+
+1. Start Docker Desktop
+2. Wait for it to be ready
+3. Run: minikube start
+4. Run: ./MINIKUBE_DEPLOY.sh (or MINIKUBE_DEPLOY.bat)
+
+OR manually:
+1. Start Docker Desktop
+2. minikube start
+3. eval $(minikube docker-env)
+4. docker build -t todo-backend:latest -f backend/Dockerfile .
+5. docker build -t todo-frontend:latest ./frontend
+6. kubectl apply -f k8s/
+7. minikube service todo-frontend
+
+═══════════════════════════════════════════════════════════════════
+
+📚 FOR MORE DETAILS:
+
+Quick Start:  MINIKUBE_QUICK_START.txt
+Full Guide:   KUBERNETES_GUIDE.md
+Summary:      K8S_DEPLOYMENT_READY.txt
+
+═══════════════════════════════════════════════════════════════════
+
+Ready to deploy once Docker Desktop is running! 🚀
+
+═══════════════════════════════════════════════════════════════════
