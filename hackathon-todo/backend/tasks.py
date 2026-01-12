@@ -2,20 +2,18 @@ import json
 import uuid
 from datetime import datetime
 
-TASKS_FILE = "tasks.json"
+# Use in-memory storage for Vercel serverless deployment
+# Note: This means tasks will be lost on function cold starts
+# For production, use a proper database (PostgreSQL, MongoDB, etc.)
+tasks = []
 
 def load_tasks():
-    try:
-        with open(TASKS_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
-
-tasks = load_tasks()
+    """Load tasks from in-memory storage"""
+    return tasks
 
 def save_tasks():
-    with open(TASKS_FILE, "w") as f:
-        json.dump(tasks, f, indent=2)
+    """Save tasks (no-op for in-memory storage, tasks are already in memory)"""
+    pass  # Tasks are already in the global 'tasks' list
 
 def add_task(title: str, description: str = "", due_date: str = "") -> str:
     global tasks
