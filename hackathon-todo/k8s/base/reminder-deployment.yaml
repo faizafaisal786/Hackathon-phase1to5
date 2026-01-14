@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-service
+  namespace: hackathon-todo
+  labels:
+    app: reminder-service
+    app.kubernetes.io/name: reminder-service
+    app.kubernetes.io/part-of: hackathon-todo
+spec:
+  replicas: 1  # Single replica for cron job consistency
+  selector:
+    matchLabels:
+      app: reminder-service
+  template:
+    metadata:
+      labels:
+        app: reminder-service
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "reminder-service"
+        dapr.io/app-port: "8001"
+        dapr.io/enable-api-logging: "true"
+        dapr.io/log-level: "info"
+    spec:
+      containers:
+        - name: reminder-service
+          image: registry.digitalocean.com/hackathon-todo/reminder-service:latest
+          ports:
+            - containerPort: 8001
+              name: http
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: DAPR_HTTP_PORT
+              value: "3500"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+      imagePullSecrets:
+        - name: registry-credentials
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reminder-service
+  namespace: hackathon-todo
+  labels:
+    app: reminder-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8001
+      protocol: TCP
+      name: http
+  selector:
+    app: reminder-service

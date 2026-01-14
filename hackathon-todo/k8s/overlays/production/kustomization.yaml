@@ -1,0 +1,50 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: hackathon-todo
+
+resources:
+  - ../../base
+
+# Production-specific patches
+patches:
+  # Scale up backend for production
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      name: backend
+
+  # Scale up frontend for production
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+    target:
+      kind: Deployment
+      name: frontend
+
+  # Increase resources for production
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+    target:
+      kind: Deployment
+      name: backend
+
+images:
+  - name: registry.digitalocean.com/hackathon-todo/backend
+    newTag: ${IMAGE_TAG}
+  - name: registry.digitalocean.com/hackathon-todo/frontend
+    newTag: ${IMAGE_TAG}
+  - name: registry.digitalocean.com/hackathon-todo/reminder-service
+    newTag: ${IMAGE_TAG}
+
+commonLabels:
+  environment: production

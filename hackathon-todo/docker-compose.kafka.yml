@@ -1,0 +1,222 @@
+version: '3.8'
+
+services:
+  # ============================================================
+  # Infrastructure Services
+  # ============================================================
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - hackathon-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    networks:
+      - hackathon-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "
+      echo 'Creating Kafka topics...'
+      kafka-topics --create --if-not-exists --topic task-events --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1
+      kafka-topics --create --if-not-exists --topic reminder-events --bootstrap-server kafka:9092 --partitions 2 --replication-factor 1
+      kafka-topics --create --if-not-exists --topic notification-events --bootstrap-server kafka:9092 --partitions 2 --replication-factor 1
+      kafka-topics --create --if-not-exists --topic dead-letter-queue --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
+      echo 'Topics created successfully!'
+      kafka-topics --list --bootstrap-server kafka:9092
+      "
+    networks:
+      - hackathon-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - hackathon-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # Backend API with Dapr Sidecar
+  # ============================================================
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DAPR_HTTP_PORT=3500
+      - PUBSUB_NAME=taskpubsub
+      - EVENTS_ENABLED=true
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hackathon-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend-dapr:
+    image: daprio/daprd:1.12.0
+    container_name: backend-dapr
+    command: [
+      "./daprd",
+      "-app-id", "backend",
+      "-app-port", "8000",
+      "-dapr-http-port", "3500",
+      "-dapr-grpc-port", "50001",
+      "-components-path", "/components",
+      "-log-level", "info"
+    ]
+    volumes:
+      - ./components:/components:ro
+    network_mode: "service:backend"
+    depends_on:
+      - backend
+
+  # ============================================================
+  # Reminder Service with Dapr Sidecar
+  # ============================================================
+
+  reminder-service:
+    build:
+      context: ./reminder-service
+      dockerfile: Dockerfile
+    container_name: reminder-service
+    ports:
+      - "8001:8001"
+    environment:
+      - DAPR_HTTP_PORT=3501
+      - PUBSUB_NAME=taskpubsub
+      - CRON_INTERVAL_SECONDS=60
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hackathon-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  reminder-dapr:
+    image: daprio/daprd:1.12.0
+    container_name: reminder-dapr
+    command: [
+      "./daprd",
+      "-app-id", "reminder-service",
+      "-app-port", "8001",
+      "-dapr-http-port", "3501",
+      "-dapr-grpc-port", "50002",
+      "-components-path", "/components",
+      "-log-level", "info"
+    ]
+    volumes:
+      - ./reminder-service/components:/components:ro
+    network_mode: "service:reminder-service"
+    depends_on:
+      - reminder-service
+
+  # ============================================================
+  # Frontend
+  # ============================================================
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - hackathon-network
+
+  # ============================================================
+  # Monitoring (Optional)
+  # ============================================================
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - hackathon-network
+
+networks:
+  hackathon-network:
+    driver: bridge
+
+volumes:
+  redis-data:

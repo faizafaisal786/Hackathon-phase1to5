@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hackathon-todo
+  labels:
+    app.kubernetes.io/name: hackathon-todo
+    app.kubernetes.io/part-of: hackathon-todo

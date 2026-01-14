@@ -1,0 +1,51 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: hackathon-todo-staging
+
+resources:
+  - ../../base
+
+# Override namespace for staging
+patches:
+  - patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: hackathon-todo-staging
+    target:
+      kind: "*"
+
+  # Single replica for staging
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+
+  # Staging domain
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: staging.hackathon-todo.com
+      - op: replace
+        path: /spec/rules/1/host
+        value: api-staging.hackathon-todo.com
+      - op: replace
+        path: /spec/tls/0/hosts
+        value:
+          - staging.hackathon-todo.com
+          - api-staging.hackathon-todo.com
+    target:
+      kind: Ingress
+
+images:
+  - name: registry.digitalocean.com/hackathon-todo/backend
+    newTag: ${IMAGE_TAG}
+  - name: registry.digitalocean.com/hackathon-todo/frontend
+    newTag: ${IMAGE_TAG}
+  - name: registry.digitalocean.com/hackathon-todo/reminder-service
+    newTag: ${IMAGE_TAG}
+
+commonLabels:
+  environment: staging

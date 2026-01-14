@@ -42,7 +42,21 @@
       "Bash(export MINIKUBE_ACTIVE_DOCKERD=\"minikube\")",
       "Bash(docker build -t todo-backend:latest -f backend/Dockerfile .)",
       "WebFetch(domain:frontend-nine-eta-22.vercel.app)",
-      "WebFetch(domain:frontend-neon-theta-22.vercel.app)"
+      "WebFetch(domain:frontend-neon-theta-22.vercel.app)",
+      "Bash(git checkout:*)",
+      "Bash(gh pr create:*)",
+      "Bash(docker build:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker run:*)",
+      "Bash(docker logs:*)",
+      "Bash(minikube image load:*)",
+      "Bash(kubectl apply:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(kubectl run:*)",
+      "Bash(minikube ip:*)",
+      "Bash(start cmd /c \"minikube service todo-frontend\")",
+      "Bash(kubectl port-forward:*)",
+      "Bash(tree:*)"
     ]
   }
 }

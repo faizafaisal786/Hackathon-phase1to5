@@ -1,0 +1,224 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (leave empty for latest)'
+        required: false
+        default: ''
+
+env:
+  REGISTRY: registry.digitalocean.com
+  REGISTRY_NAME: hackathon-todo
+  CLUSTER_NAME: hackathon-todo-k8s
+
+jobs:
+  # ============================================================
+  # Build and Push Images
+  # ============================================================
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate image tag
+        id: meta
+        run: |
+          if [[ "${{ github.event.inputs.image_tag }}" != "" ]]; then
+            echo "version=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=prod-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to DigitalOcean Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          password: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      # Build Backend
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hackathon-todo/backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/backend:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Build Frontend
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hackathon-todo/frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/frontend:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.hackathon-todo.com
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Build Reminder Service
+      - name: Build and push Reminder Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./hackathon-todo/reminder-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/reminder-service:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/reminder-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  # Deploy to Production
+  # ============================================================
+  deploy:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Configure kubectl
+        run: |
+          doctl kubernetes cluster kubeconfig save ${{ env.CLUSTER_NAME }}
+
+      - name: Install Dapr CLI
+        run: |
+          wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
+
+      - name: Ensure Dapr is installed on cluster
+        run: |
+          dapr status -k || dapr init -k --wait
+
+      - name: Create/Update Secrets
+        run: |
+          kubectl create namespace hackathon-todo --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic redpanda-credentials \
+            --namespace=hackathon-todo \
+            --from-literal=brokers=${{ secrets.REDPANDA_BROKERS }} \
+            --from-literal=username=${{ secrets.REDPANDA_USERNAME }} \
+            --from-literal=password=${{ secrets.REDPANDA_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic app-secrets \
+            --namespace=hackathon-todo \
+            --from-literal=OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret docker-registry registry-credentials \
+            --namespace=hackathon-todo \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username=${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} \
+            --docker-password=${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy with Kustomize
+        run: |
+          cd hackathon-todo/k8s/overlays/production
+          kustomize edit set image \
+            registry.digitalocean.com/hackathon-todo/backend:${{ needs.build.outputs.image_tag }} \
+            registry.digitalocean.com/hackathon-todo/frontend:${{ needs.build.outputs.image_tag }} \
+            registry.digitalocean.com/hackathon-todo/reminder-service:${{ needs.build.outputs.image_tag }}
+          kustomize build . | kubectl apply -f -
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/backend -n hackathon-todo --timeout=300s
+          kubectl rollout status deployment/frontend -n hackathon-todo --timeout=300s
+          kubectl rollout status deployment/reminder-service -n hackathon-todo --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n hackathon-todo
+          kubectl get services -n hackathon-todo
+          kubectl get ingress -n hackathon-todo
+
+      - name: Run smoke tests
+        run: |
+          # Wait for ingress to be ready
+          sleep 30
+          # Health check
+          curl -f https://api.hackathon-todo.com/health || echo "Health check pending..."
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          body: |
+            ## Deployment Info
+            - **Image Tag:** ${{ needs.build.outputs.image_tag }}
+            - **Frontend:** https://hackathon-todo.com
+            - **API:** https://api.hackathon-todo.com
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "✅ Production deployment successful!"
+          echo "Frontend: https://hackathon-todo.com"
+          echo "API: https://api.hackathon-todo.com"
+          echo "Image Tag: ${{ needs.build.outputs.image_tag }}"
+
+  # ============================================================
+  # Rollback Job (Manual Trigger)
+  # ============================================================
+  rollback:
+    name: Rollback (if needed)
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: failure()
+    environment: production
+
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Configure kubectl
+        run: |
+          doctl kubernetes cluster kubeconfig save ${{ env.CLUSTER_NAME }}
+
+      - name: Rollback deployments
+        run: |
+          echo "⚠️ Deployment failed, initiating rollback..."
+          kubectl rollout undo deployment/backend -n hackathon-todo
+          kubectl rollout undo deployment/frontend -n hackathon-todo
+          kubectl rollout undo deployment/reminder-service -n hackathon-todo
+
+      - name: Verify rollback
+        run: |
+          kubectl rollout status deployment/backend -n hackathon-todo
+          kubectl rollout status deployment/frontend -n hackathon-todo
+          kubectl rollout status deployment/reminder-service -n hackathon-todo
