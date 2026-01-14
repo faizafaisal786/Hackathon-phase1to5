@@ -275,23 +275,43 @@ def parse_demo_command(message: str) -> tuple:
     Returns: (tool_name, arguments)
     """
     message_lower = message.lower().strip()
+    original_message = message.strip()
+
+    # Friendly greetings and help
+    greetings = ["hello", "hi", "hey", "help", "what can you do", "kya kar sakte", "madad"]
+    if any(word in message_lower for word in greetings) and not any(word in message_lower for word in ["add", "show", "task", "complete", "delete"]):
+        return ("help", {})
+
+    # Planning/suggestion requests
+    planning_words = ["what should i do", "plan my day", "suggest", "help me plan", "kya karun", "important"]
+    if any(word in message_lower for word in planning_words):
+        return ("suggest", {})
 
     # Add task - Hindi/Hinglish support
-    if any(word in message_lower for word in ["add", "create", "new task", "add kar", "add karo", "add kar do", 
-                                               "kaam add", "task add", "add kaam"]):
+    if any(word in message_lower for word in ["add", "create", "new task", "add kar", "add karo", "add kar do",
+                                               "kaam add", "task add", "add kaam", "remind me"]):
+        # Extract description if present
+        description = ""
+        title_part = original_message
+
+        # Check for "Description:" pattern
+        desc_match = re.search(r"[.]\s*description[:\s]+(.+)", original_message, re.IGNORECASE)
+        if desc_match:
+            description = desc_match.group(1).strip()
+            title_part = original_message[:desc_match.start()]
+
         # Extract task title
-        # Remove date-related keywords first
-        title_message = message_lower
-        for date_word in ["kal ka", "kal", "tomorrow", "tomorrow's", "parso", "aaj ka", "today"]:
+        title_message = title_part.lower()
+        for date_word in ["kal ka", "kal", "tomorrow", "tomorrow's", "parso", "aaj ka", "today", "remind me to", "remind me"]:
             title_message = re.sub(rf"\b{date_word}\b", "", title_message, flags=re.IGNORECASE)
-        
+
         patterns = [
             r"(?:add|create|new)\s+(?:a\s+)?task\s+(?:to\s+)?(.+)",
             r"(?:add|create|kar|karo|kar\s+do)\s+(.+)",
             r"(?:kaam|task)\s+add\s+(.+)",
             r"add\s+(?:kar|karo|kar\s+do)\s+(.+)",
         ]
-        
+
         title = "New task"
         for pattern in patterns:
             match = re.search(pattern, title_message)
@@ -306,11 +326,11 @@ def parse_demo_command(message: str) -> tuple:
         # Capitalize first letter
         if title and title != "New task":
             title = title[0].upper() + title[1:] if len(title) > 1 else title.upper()
-        
+
         # Extract due date
         due_date = parse_date_from_message(message)
-        
-        return ("add_task", {"title": title, "due_date": due_date})
+
+        return ("add_task", {"title": title, "description": description, "due_date": due_date})
 
     # List tasks - Hindi/Urdu support
     elif any(word in message_lower for word in ["show", "list", "display", "what", "see", "view",
@@ -370,26 +390,63 @@ def chat_demo_mode(message: str, conversation_history: list = None) -> dict:
     tool_name, arguments = parse_demo_command(message)
 
     if tool_name:
-        # Execute the tool
-        result = execute_tool(tool_name, arguments)
-
-        # Generate friendly response
-        if tool_name == "add_task":
-            due_info = ""
-            if arguments.get('due_date'):
-                due_info = f" (Due: {arguments.get('due_date')})"
-            response = f"✅ Task added successfully!\n\n📝 **{arguments.get('title', 'New task')}**{due_info}\n\nYour task has been saved. Say 'show tasks' to see all your tasks."
-        elif tool_name == "list_tasks":
-            status = arguments.get('status', 'all')
-            response = f"📋 Your {status} tasks:\n\n{result}"
-        elif tool_name == "complete_task":
-            response = f"🎉 Great job! Task marked as complete!\n\n{result}"
-        elif tool_name == "delete_task":
-            response = f"🗑️ Task deleted successfully!\n\n{result}"
-        elif tool_name == "update_task":
-            response = f"✏️ Task updated successfully!\n\n{result}"
+        # Handle special commands
+        if tool_name == "help":
+            response = (
+                "🤖 **AI Task Assistant**\n\n"
+                "Hello! I can help you manage your tasks. Here's what I can do:\n\n"
+                "**➕ Add Tasks:**\n"
+                "• 'Add task Buy groceries'\n"
+                "• 'Add task Learn Docker. Description: Practice commands'\n"
+                "• 'Kal ka kaam add karo meeting'\n\n"
+                "**📋 View Tasks:**\n"
+                "• 'Show my tasks'\n"
+                "• 'What tasks are pending?'\n"
+                "• 'Tasks dikhao'\n\n"
+                "**✅ Complete Tasks:**\n"
+                "• 'Complete task [ID]'\n"
+                "• 'Mark Buy groceries as done'\n\n"
+                "**🗑️ Delete Tasks:**\n"
+                "• 'Delete task [ID]'\n"
+                "• 'Remove task homework'\n\n"
+                "💡 I understand English, Hindi & Urdu!"
+            )
+        elif tool_name == "suggest":
+            # Get tasks and suggest
+            tasks_result = execute_tool("list_tasks", {"status": "pending"})
+            response = (
+                "💡 **Here's my suggestion for today:**\n\n"
+                f"{tasks_result}\n\n"
+                "🎯 **Tips:**\n"
+                "• Start with high priority tasks first\n"
+                "• Break big tasks into smaller ones\n"
+                "• Take short breaks between tasks\n\n"
+                "Need to add more tasks? Just say 'Add task [your task]'"
+            )
         else:
-            response = result
+            # Execute the tool
+            result = execute_tool(tool_name, arguments)
+
+            # Generate friendly response
+            if tool_name == "add_task":
+                due_info = ""
+                desc_info = ""
+                if arguments.get('due_date'):
+                    due_info = f"\n📅 Due: {arguments.get('due_date')}"
+                if arguments.get('description'):
+                    desc_info = f"\n📝 {arguments.get('description')}"
+                response = f"✅ Task added successfully!\n\n**{arguments.get('title', 'New task')}**{desc_info}{due_info}\n\nSay 'show tasks' to see all your tasks."
+            elif tool_name == "list_tasks":
+                status = arguments.get('status', 'all')
+                response = f"📋 Your {status} tasks:\n\n{result}"
+            elif tool_name == "complete_task":
+                response = f"🎉 Great job! Task marked as complete!\n\n{result}"
+            elif tool_name == "delete_task":
+                response = f"🗑️ Task deleted successfully!\n\n{result}"
+            elif tool_name == "update_task":
+                response = f"✏️ Task updated successfully!\n\n{result}"
+            else:
+                response = result
     else:
         response = (
             "🤖 **AI Task Assistant**\n\n"
