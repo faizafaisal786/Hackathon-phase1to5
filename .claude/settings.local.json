@@ -63,7 +63,8 @@
       "Bash(railway version:*)",
       "Bash(railway:*)",
       "Bash(start https://railway.app/new)",
-      "Bash(start \"https://railway.app/new/github\")"
+      "Bash(start \"https://railway.app/new/github\")",
+      "Bash(start https://frontend-neon-theta-22.vercel.app)"
     ]
   }
 }

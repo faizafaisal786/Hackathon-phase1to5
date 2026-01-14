@@ -308,36 +308,38 @@ def parse_demo_command(message: str) -> tuple:
         
         return ("add_task", {"title": title, "due_date": due_date})
 
-    # List tasks
-    elif any(word in message_lower for word in ["show", "list", "display", "what", "see", "view"]):
-        if "completed" in message_lower or "done" in message_lower:
+    # List tasks - Hindi/Urdu support
+    elif any(word in message_lower for word in ["show", "list", "display", "what", "see", "view",
+                                                  "dikhao", "dikha", "batao", "bata", "tasks", "kaam"]):
+        if "completed" in message_lower or "done" in message_lower or "mukammal" in message_lower or "complete" in message_lower:
             return ("list_tasks", {"status": "completed"})
-        elif "pending" in message_lower:
+        elif "pending" in message_lower or "baqi" in message_lower:
             return ("list_tasks", {"status": "pending"})
         else:
             return ("list_tasks", {})
 
-    # Complete task
-    elif any(word in message_lower for word in ["complete", "done", "finish", "mark as complete"]):
+    # Complete task - Hindi/Urdu support
+    elif any(word in message_lower for word in ["complete", "done", "finish", "mark as complete",
+                                                  "mukammal", "khatam", "ho gaya", "kar diya", "poora"]):
         # Try to extract task ID or number
-        match = re.search(r"(?:task|id)\s*[:#]?\s*([a-f0-9-]+)", message_lower)
+        match = re.search(r"(?:task|id|kaam)\s*[:#]?\s*([a-f0-9-]+)", message_lower)
         if match:
             return ("complete_task", {"id": match.group(1)})
         # Try to extract first/second/etc.
-        match = re.search(r"(first|second|third|1st|2nd|3rd|\d+)", message_lower)
+        match = re.search(r"(first|second|third|1st|2nd|3rd|pehla|doosra|teesra|\d+)", message_lower)
         if match:
             return ("complete_task", {"id": "by_position_" + match.group(1)})
         return (None, None)
 
-    # Delete task
-    elif any(word in message_lower for word in ["delete", "remove"]):
-        match = re.search(r"(?:task|id)\s*[:#]?\s*([a-f0-9-]+)", message_lower)
+    # Delete task - Hindi/Urdu support
+    elif any(word in message_lower for word in ["delete", "remove", "hata", "hatao", "mitao", "mita"]):
+        match = re.search(r"(?:task|id|kaam)\s*[:#]?\s*([a-f0-9-]+)", message_lower)
         if match:
             return ("delete_task", {"id": match.group(1)})
         return (None, None)
 
-    # Update task
-    elif any(word in message_lower for word in ["update", "modify", "change", "edit"]):
+    # Update task - Hindi/Urdu support
+    elif any(word in message_lower for word in ["update", "modify", "change", "edit", "badal", "badlo"]):
         match = re.search(r"(?:task|id)\s*[:#]?\s*([a-f0-9-]+)", message_lower)
         if match:
             return ("update_task", {"id": match.group(1)})
