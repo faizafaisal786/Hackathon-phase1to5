@@ -297,11 +297,15 @@ def parse_demo_command(message: str) -> tuple:
             match = re.search(pattern, title_message)
             if match:
                 title = match.group(1).strip()
-                # Clean up common Hindi/English words
-                title = re.sub(r"\b(ka|ko|kaa|kii)\b", "", title, flags=re.IGNORECASE).strip()
+                # Clean up common Hindi/English filler words
+                title = re.sub(r"\b(ka|ko|kaa|kii|kar|karo|kar\s+do|do|kaam|task|add)\b", "", title, flags=re.IGNORECASE).strip()
                 title = re.sub(r"\s+", " ", title)
                 if title:
                     break
+
+        # Capitalize first letter
+        if title and title != "New task":
+            title = title[0].upper() + title[1:] if len(title) > 1 else title.upper()
         
         # Extract due date
         due_date = parse_date_from_message(message)
@@ -371,26 +375,34 @@ def chat_demo_mode(message: str, conversation_history: list = None) -> dict:
 
         # Generate friendly response
         if tool_name == "add_task":
-            response = f"I've added the task '{arguments.get('title', 'New task')}' to your list! {result}"
+            due_info = ""
+            if arguments.get('due_date'):
+                due_info = f" (Due: {arguments.get('due_date')})"
+            response = f"✅ Task added successfully!\n\n📝 **{arguments.get('title', 'New task')}**{due_info}\n\nYour task has been saved. Say 'show tasks' to see all your tasks."
         elif tool_name == "list_tasks":
             status = arguments.get('status', 'all')
-            response = f"Here are your {status} tasks:\n\n{result}"
+            response = f"📋 Your {status} tasks:\n\n{result}"
         elif tool_name == "complete_task":
-            response = f"Great job! {result}"
+            response = f"🎉 Great job! Task marked as complete!\n\n{result}"
         elif tool_name == "delete_task":
-            response = f"Task removed. {result}"
+            response = f"🗑️ Task deleted successfully!\n\n{result}"
         elif tool_name == "update_task":
-            response = f"Task updated. {result}"
+            response = f"✏️ Task updated successfully!\n\n{result}"
         else:
             response = result
     else:
         response = (
-            "I can help you manage your tasks! Try saying:\n"
-            "- 'Add a task to buy groceries'\n"
-            "- 'Show me my tasks'\n"
-            "- 'Complete task ID: xyz'\n"
-            "- 'Delete the first task'\n\n"
-            f"(Running in FREE demo mode - no API key required)"
+            "🤖 **AI Task Assistant**\n\n"
+            "I can help you manage your tasks! Try these commands:\n\n"
+            "**English:**\n"
+            "• Add task buy groceries\n"
+            "• Show my tasks\n"
+            "• Complete task [ID]\n\n"
+            "**Hindi/Urdu:**\n"
+            "• Kal ka kaam add karo meeting\n"
+            "• Tasks dikhao\n"
+            "• Pending kaam batao\n\n"
+            "💡 I understand natural language in English, Hindi & Urdu!"
         )
 
     # Add assistant response
