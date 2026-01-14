@@ -56,7 +56,13 @@
       "Bash(minikube ip:*)",
       "Bash(start cmd /c \"minikube service todo-frontend\")",
       "Bash(kubectl port-forward:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(where railway:*)",
+      "Bash(where:*)",
+      "Bash(npm install:*)",
+      "Bash(railway version:*)",
+      "Bash(railway:*)",
+      "Bash(start https://railway.app/new)"
     ]
   }
 }
