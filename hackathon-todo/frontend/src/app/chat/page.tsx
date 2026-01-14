@@ -62,22 +62,22 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Navigation */}
-      <div className="bg-white shadow">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Chat with AI</h1>
-            <p className="text-sm text-gray-600">Manage your tasks using natural language</p>
+            <h1 className="text-2xl font-bold text-white">🤖 AI Task Assistant</h1>
+            <p className="text-sm text-purple-200">Manage tasks in English, Hindi & Urdu</p>
           </div>
           <div className="flex gap-4 items-center">
             <Link
               href="/tasks"
-              className="text-gray-700 hover:text-gray-900 transition font-medium"
+              className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition font-medium"
             >
-              Tasks
+              📋 Tasks
             </Link>
             <button
               onClick={handleLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition font-medium"
+              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium"
             >
               Logout
             </button>

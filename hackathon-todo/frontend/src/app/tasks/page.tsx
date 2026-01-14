@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { tasksAPI, Task, TaskCreate } from '@/lib/api';
+import Link from 'next/link';
 
 export default function TasksPage() {
   const { isAuthenticated, logout } = useAuth();
@@ -129,14 +130,34 @@ export default function TasksPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Navigation Bar */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-4">
+              <Link
+                href="/tasks"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium"
+              >
+                📋 Tasks
+              </Link>
+              <Link
+                href="/chat"
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition"
+              >
+                🤖 AI Chat
+              </Link>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900">My Tasks</h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-          >
-            Logout
-          </button>
         </div>
 
         {error && (
