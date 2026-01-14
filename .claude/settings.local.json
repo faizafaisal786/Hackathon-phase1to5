@@ -62,7 +62,8 @@
       "Bash(npm install:*)",
       "Bash(railway version:*)",
       "Bash(railway:*)",
-      "Bash(start https://railway.app/new)"
+      "Bash(start https://railway.app/new)",
+      "Bash(start \"https://railway.app/new/github\")"
     ]
   }
 }
