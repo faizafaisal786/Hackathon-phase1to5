@@ -43,28 +43,9 @@
       "Bash(docker build -t todo-backend:latest -f backend/Dockerfile .)",
       "WebFetch(domain:frontend-nine-eta-22.vercel.app)",
       "WebFetch(domain:frontend-neon-theta-22.vercel.app)",
-      "Bash(git checkout:*)",
-      "Bash(gh pr create:*)",
-      "Bash(docker build:*)",
-      "Bash(docker ps:*)",
-      "Bash(docker run:*)",
-      "Bash(docker logs:*)",
-      "Bash(minikube image load:*)",
-      "Bash(kubectl apply:*)",
-      "Bash(kubectl logs:*)",
-      "Bash(kubectl run:*)",
-      "Bash(minikube ip:*)",
-      "Bash(start cmd /c \"minikube service todo-frontend\")",
-      "Bash(kubectl port-forward:*)",
-      "Bash(tree:*)",
-      "Bash(where railway:*)",
-      "Bash(where:*)",
-      "Bash(npm install:*)",
-      "Bash(railway version:*)",
-      "Bash(railway:*)",
-      "Bash(start https://railway.app/new)",
-      "Bash(start \"https://railway.app/new/github\")",
-      "Bash(start https://frontend-neon-theta-22.vercel.app)"
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
