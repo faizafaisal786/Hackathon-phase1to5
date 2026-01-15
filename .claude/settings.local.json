@@ -45,7 +45,10 @@
       "WebFetch(domain:frontend-neon-theta-22.vercel.app)",
       "Bash(git merge:*)",
       "Bash(git stash:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:backend-flax-seven-28.vercel.app)",
+      "WebFetch(domain:hackathon-todo.vercel.app)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }
