@@ -96,10 +96,10 @@ export default function ChatUI({ conversationId, onConversationCreated }: ChatUI
               <div className="mt-4 space-y-2 text-left text-xs">
                 <p className="text-gray-500">Try:</p>
                 <ul className="text-gray-400 space-y-1">
-                  <li>• "Add a task to buy groceries"</li>
-                  <li>• "Show me all my tasks"</li>
-                  <li>• "Mark task 1 as complete"</li>
-                  <li>• "Delete the grocery task"</li>
+                  <li>• &quot;Add a task to buy groceries&quot;</li>
+                  <li>• &quot;Show me all my tasks&quot;</li>
+                  <li>• &quot;Mark task 1 as complete&quot;</li>
+                  <li>• &quot;Delete the grocery task&quot;</li>
                 </ul>
               </div>
             </div>
